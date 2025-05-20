@@ -1,0 +1,47 @@
+﻿@model Task_Management_System.Models.Dtos.CreateOrEditTaskDto
+
+<div class="modal-header">
+    <h5 class="modal-title">@((Model?.Id == 0) ? "Add Task" : "Edit Task")</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <form id="formCreateOrEdit">
+        @Html.AntiForgeryToken()
+
+        <input asp-for="Id" type="hidden" />
+
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="DueDate" class="form-label"></label>
+            <input asp-for="DueDate" type="date" class="form-control" value="@Model?.DueDate.ToString("yyyy-MM-dd")" />
+            <span asp-validation-for="DueDate" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Status" class="form-label"></label>
+            <select asp-for="Status" class="form-select">
+                <option value="">-- Select Status --</option>
+                <option value="InProgress">InProgress</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <span asp-validation-for="Status" class="text-danger"></span>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <button type="submit" form="formCreateOrEdit" class="btn btn-success">Save</button>
+</div>

@@ -1,0 +1,44 @@
+﻿@model Task_Management_System.Models.DTOs.CreateOrEditUserTaskDto
+
+<form id="formCreateOrEdit" method="post">
+    <div class="modal-header">
+        <h5 class="modal-title">@((Model.Id == 0) ? "Assign Task" : "Edit Assignment")</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="mb-3">
+            <label asp-for="UserId" class="form-label">User</label>
+            <select asp-for="UserId" class="form-select" required>
+                <option value="">-- Select Active User --</option>
+                @foreach (var user in ViewBag.Users as List<Task_Management_System.Models.User>)
+{
+                    <option value="@user.Id" selected="@(Model.UserId == user.Id ? "selected" : null)">@user.Name</option>
+                }
+
+            </select>
+            <span asp-validation-for="UserId" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="TaskId" class="form-label">Task</label>
+            <select asp-for="TaskId" class="form-select" required>
+                <option value="">-- Select Completed Task --</option>
+                @foreach (var task in ViewBag.Tasks as List<Task_Management_System.Models.Tasks>)
+                {
+                       <option value="@task.Id" selected="@(Model.TaskId == task.Id ? "selected" : null)">@task.Title</option>
+                }
+            </select>
+            <span asp-validation-for="TaskId" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
