@@ -1,0 +1,125 @@
+﻿@{
+    ViewData["Title"] = "My Tasks";
+}
+
+<div class="container mt-4">
+    <h2>My Tasks</h2>
+
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label>Status</label>
+            <select id="statusFilter" class="form-select">
+                <option value="">All</option>
+                <option value="ToDo">ToDo</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Completed">Completed</option>
+            </select>
+        </div>
+        
+    </div>
+
+    <table id="tasksTable" class="table table-bordered table-striped table-responsive">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Update Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var table = $('#tasksTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '@Url.Action("GetMyTasks")',
+                    type: 'POST',
+                    data: function (d) {
+                        d.status = $('#statusFilter').val();
+                        d.dueDateFrom = $('#dueDateFrom').val();
+                        d.dueDateTo = $('#dueDateTo').val();
+
+                        // DataTables paging & sorting params
+                        d.start = d.start;
+                        d.length = d.length;
+                        d.sortColumn = d.columns[d.order[0].column].data;
+                        d.sortDir = d.order[0].dir;
+                    }
+                },
+                columns: [
+                    { data: 'title' },
+                    { data: 'dueDate' },
+                    {
+                        data: 'status',
+                        render: function (data) {
+                            var badgeClass = 'secondary';
+                            if (data === 'ToDo') badgeClass = 'secondary';
+                            else if (data === 'InProgress') badgeClass = 'warning';
+                            else if (data === 'Completed') badgeClass = 'success';
+                            return `<span class="badge bg-${badgeClass}">${data}</span>`;
+                        }
+                    },
+                    { data: 'priority' },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        render: function (id, type, row) {
+                            var options = ['ToDo', 'InProgress', 'Completed'];
+                            var select = `<select class="form-select form-select-sm status-update" data-task-id="${id}">`;
+                            options.forEach(function (opt) {
+                                select += `<option value="${opt}" ${row.status === opt ? 'selected' : ''}>${opt}</option>`;
+                            });
+                            select += '</select>';
+                            return select;
+                        }
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+
+            $('#statusFilter, #dueDateFrom, #dueDateTo').on('change', function () {
+                table.ajax.reload();
+            });
+
+            $('#tasksTable').on('change', '.status-update', function () {
+                var taskId = $(this).data('task-id');
+                var status = $(this).val();
+
+                $.ajax({
+                    url: '@Url.Action("UpdateStatus")',
+                    type: 'POST',
+                    data: { id: taskId, status: status },
+                    success: function (res) {
+                        if (res.success) {
+                            showAlert('Status updated successfully.', 'success');
+                            table.ajax.reload(null, false);
+                        } else {
+                            showAlert('Failed to update status.', 'danger');
+                        }
+                    },
+                    error: function () {
+                        showAlert('Error updating status.', 'danger');
+                    }
+                });
+            });
+
+            function showAlert(message, type = 'info') {
+                var alertHtml = `
+                    <div class="alert alert-${type} alert-dismissible fade show fixed-top m-3" role="alert" style="z-index: 1100; min-width: 250px;">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                var alert = $(alertHtml).appendTo('body');
+                setTimeout(() => alert.alert('close'), 4000);
+            }
+        });
+    </script>
+}

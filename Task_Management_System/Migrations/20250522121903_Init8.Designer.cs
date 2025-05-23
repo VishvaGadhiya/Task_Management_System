@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Task_Management_System.Data;
 
@@ -11,13 +12,15 @@ using Task_Management_System.Data;
 namespace Task_Management_System.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250522121903_Init8")]
+    partial class Init8
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.16")
+                .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -57,12 +60,6 @@ namespace Task_Management_System.Migrations
                             Id = 1,
                             Name = "Admin",
                             NormalizedName = "ADMIN"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Manager",
-                            NormalizedName = "MANAGER"
                         },
                         new
                         {
@@ -294,7 +291,7 @@ namespace Task_Management_System.Migrations
                         {
                             Id = 1,
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "80b52b58-f7f0-4258-813f-f320ab871cae",
+                            ConcurrencyStamp = "ec9d3d63-9205-4955-958e-5498b2551fff",
                             Email = "admin@example.com",
                             EmailConfirmed = true,
                             Gender = "Male",
@@ -303,7 +300,7 @@ namespace Task_Management_System.Migrations
                             Name = "Admin User",
                             NormalizedEmail = "ADMIN@EXAMPLE.COM",
                             NormalizedUserName = "ADMIN",
-                            PasswordHash = "AQAAAAIAAYagAAAAEKr39J4Yv7mA9lmqXmy8jAWoqADTTnX+35LbyW3zDmqMRYych2RNTYUWElwyCZTXPQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEFoG0dST1Be9zjL4IIVPu8EiAF3skEhDU3U4EOQOG3b+RJ5DWft2UURbPQh9JhEbRA==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-ADMIN-SECURITY-STAMP",
                             Status = "Active",

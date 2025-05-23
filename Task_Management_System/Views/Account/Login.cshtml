@@ -1,0 +1,69 @@
+﻿@model Task_Management_System.Models.DTOs.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5 col-xl-4">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-primary text-white text-center rounded-top-4">
+                    <h4 class="fw-bold mb-0">Login</h4>
+                    <p class="small mb-0 opacity-75">Access your account</p>
+                </div>
+                <div class="card-body p-4">
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-info text-center small">@TempData["Message"]</div>
+                    }
+
+                    <form asp-action="Login" method="post" novalidate>
+                        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="UserName" class="form-label">Username</label>
+                            <input asp-for="UserName" class="form-control" placeholder="Enter your username" />
+                            <span asp-validation-for="UserName" class="text-danger small d-block mt-1"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input asp-for="Password" class="form-control" placeholder="Enter your password" type="password" />
+                            <span asp-validation-for="Password" class="text-danger small d-block mt-1"></span>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="RememberMe" class="form-check-input" />
+                            <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                        </div>
+
+                        <div class="d-grid mt-2">
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                                Login
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <a asp-action="ForgotPassword" class="text-decoration-none small">Forgot Password?</a>
+                        </div>
+
+                        <div class="text-center mt-2">
+                            <p class="text-muted small mb-0">
+                                Don't have an account?
+                                <a asp-action="Register" class="text-decoration-none">Register here</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <p class="text-muted small">By logging in, you agree to our Terms of Service and Privacy Policy.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

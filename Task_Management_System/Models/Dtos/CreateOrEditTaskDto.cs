@@ -16,7 +16,6 @@ namespace Task_Management_System.Models.Dtos
         [DataType(DataType.Date)]
         public DateTime DueDate { get; set; }
 
-        [Required]
-        public string Status { get; set; }
+        public string? Status { get; set; }
     }
 }

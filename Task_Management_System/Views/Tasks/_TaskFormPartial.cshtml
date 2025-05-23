@@ -1,5 +1,12 @@
 ﻿@model Task_Management_System.Models.Dtos.CreateOrEditTaskDto
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
 <div class="modal-header">
     <h5 class="modal-title">@((Model?.Id == 0) ? "Add Task" : "Edit Task")</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -29,15 +36,7 @@
             <span asp-validation-for="DueDate" class="text-danger"></span>
         </div>
 
-        <div class="mb-3">
-            <label asp-for="Status" class="form-label"></label>
-            <select asp-for="Status" class="form-select">
-                <option value="">-- Select Status --</option>
-                <option value="InProgress">InProgress</option>
-                <option value="Completed">Completed</option>
-            </select>
-            <span asp-validation-for="Status" class="text-danger"></span>
-        </div>
+       
     </form>
 </div>
 

@@ -13,7 +13,7 @@
             <select asp-for="UserId" class="form-select" required>
                 <option value="">-- Select Active User --</option>
                 @foreach (var user in ViewBag.Users as List<Task_Management_System.Models.User>)
-{
+                {
                     <option value="@user.Id" selected="@(Model.UserId == user.Id ? "selected" : null)">@user.Name</option>
                 }
 
@@ -27,7 +27,7 @@
                 <option value="">-- Select Completed Task --</option>
                 @foreach (var task in ViewBag.Tasks as List<Task_Management_System.Models.Tasks>)
                 {
-                       <option value="@task.Id" selected="@(Model.TaskId == task.Id ? "selected" : null)">@task.Title</option>
+                    <option value="@task.Id" selected="@(Model.TaskId == task.Id ? "selected" : null)">@task.Title</option>
                 }
             </select>
             <span asp-validation-for="TaskId" class="text-danger"></span>

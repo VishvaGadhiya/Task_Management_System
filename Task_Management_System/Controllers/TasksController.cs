@@ -82,7 +82,7 @@ namespace Task_Management_System.Controllers
             var dto = new CreateOrEditTaskDto
             {
                 DueDate = DateTime.Now.AddDays(7),
-                Status = "InProgress"
+                Status = "ToDo"    // <-- default status when creating new task
             };
             return PartialView("_TaskFormPartial", dto);
         }
@@ -92,19 +92,36 @@ namespace Task_Management_System.Controllers
         {
             if (ModelState.IsValid)
             {
-                var task = new Tasks
+                try
                 {
-                    Title = dto.Title,
-                    Description = dto.Description,
-                    DueDate = dto.DueDate,
-                    Status = dto.Status
-                };
-                _context.Tasks.Add(task);
-                await _context.SaveChangesAsync();
-                return Json(new { success = true });
+                    var task = new Tasks
+                    {
+                        Title = dto.Title,
+                        Description = dto.Description,
+                        DueDate = dto.DueDate,
+                        Status = string.IsNullOrEmpty(dto.Status) ? "ToDo" : dto.Status
+                    };
+                    _context.Tasks.Add(task);
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true });
+                }
+                catch (Exception ex)
+                {
+                    // Save the exception message to TempData
+                    TempData["ErrorMessage"] = $"An error occurred while saving the task: {ex.Message}";
+                }
             }
+            else
+            {
+                // Extract model validation errors
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                TempData["ErrorMessage"] = string.Join(" | ", errors);
+            }
+
+            // If we reach here, either validation failed or an exception occurred
             return PartialView("_TaskFormPartial", dto);
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
@@ -129,20 +146,46 @@ namespace Task_Management_System.Controllers
         {
             if (ModelState.IsValid)
             {
-                var task = await _context.Tasks.FindAsync(dto.Id);
-                if (task == null) return NotFound();
+                try
+                {
+                    var task = await _context.Tasks.FindAsync(dto.Id);
+                    if (task == null)
+                    {
+                        TempData["ErrorMessage"] = "Task not found.";
+                        return PartialView("_TaskFormPartial", dto);
+                    }
 
-                task.Title = dto.Title;
-                task.Description = dto.Description;
-                task.DueDate = dto.DueDate;
-                task.Status = dto.Status;
+                    task.Title = dto.Title;
+                    task.Description = dto.Description;
+                    task.DueDate = dto.DueDate;
+                    task.Status = string.IsNullOrEmpty(dto.Status) ? "ToDo" : dto.Status;
 
-                _context.Tasks.Update(task);
-                await _context.SaveChangesAsync();
-                return Json(new { success = true });
+                    _context.Tasks.Update(task);
+                    await _context.SaveChangesAsync();
+
+                    return Json(new { success = true });
+                }
+                catch (Exception ex)
+                {
+                    string GetFullExceptionMessage(Exception exception)
+                    {
+                        if (exception == null) return string.Empty;
+                        return exception.Message + (exception.InnerException != null ? " --> " + GetFullExceptionMessage(exception.InnerException) : "");
+                    }
+
+                    TempData["ErrorMessage"] = "An error occurred while updating the task: " + GetFullExceptionMessage(ex);
+                }
             }
+            else
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                TempData["ErrorMessage"] = string.Join(" | ", errors);
+            }
+
             return PartialView("_TaskFormPartial", dto);
         }
+
+
 
         [HttpPost]
         public async Task<IActionResult> Delete(int id)

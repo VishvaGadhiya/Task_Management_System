@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -10,6 +11,8 @@ using Task_Management_System.Models.Dtos;
 
 namespace Task_Management_System.Controllers
 {
+    [Authorize(Roles = "Admin")]
+
     public class UserController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -35,7 +38,26 @@ namespace Task_Management_System.Controllers
             var genderFilter = Request.Form["gender"].FirstOrDefault();
             var statusFilter = Request.Form["status"].FirstOrDefault();
 
-            var query = _context.Users.AsQueryable();
+            // Get user role ID for "User"
+            var userRole = _context.Roles.FirstOrDefault(r => r.Name == "User");
+            if (userRole == null)
+            {
+                return Json(new
+                {
+                    draw,
+                    recordsFiltered = 0,
+                    recordsTotal = 0,
+                    data = new object[] { }
+                });
+            }
+
+            var userRoleId = userRole.Id;
+
+            // Query users who have User role
+            var query = from u in _context.Users
+                        join ur in _context.UserRoles on u.Id equals ur.UserId
+                        where ur.RoleId == userRoleId
+                        select u;
 
             if (!string.IsNullOrEmpty(searchValue))
             {
@@ -77,6 +99,7 @@ namespace Task_Management_System.Controllers
                 data
             });
         }
+
 
         [HttpGet]
         public IActionResult Create()

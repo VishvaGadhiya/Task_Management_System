@@ -1,0 +1,91 @@
+﻿@model Task_Management_System.Models.DTOs.RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-primary text-white text-center rounded-top-4">
+                    <h4 class="fw-bold mb-0">Create Account</h4>
+                    <p class="small mb-0 opacity-75">Join our platform to manage your tasks</p>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Register" method="post" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="Name" class="form-label">Full Name</label>
+                                <input asp-for="Name" class="form-control" placeholder="Enter your full name" />
+                                <span asp-validation-for="Name" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="UserName" class="form-label">Username</label>
+                                <input asp-for="UserName" class="form-control" placeholder="Enter username" />
+                                <span asp-validation-for="UserName" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" placeholder="Enter email" />
+                                <span asp-validation-for="Email" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Gender" class="form-label">Gender</label>
+                                <select asp-for="Gender" class="form-select">
+                                    <option value="">Select Gender</option>
+                                    <option>Male</option>
+                                    <option>Female</option>
+                                    <option>Other</option>
+                                </select>
+                                <span asp-validation-for="Gender" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="JoinDate" class="form-label">Join Date</label>
+                                <input asp-for="JoinDate" type="date" class="form-control" />
+                                <span asp-validation-for="JoinDate" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Password" class="form-label">Password</label>
+                                <input asp-for="Password" type="password" class="form-control" placeholder="Create password" />
+                                <span asp-validation-for="Password" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" />
+                                <span asp-validation-for="ConfirmPassword" class="text-danger small d-block mt-1"></span>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                                    Register Now
+                                </button>
+                            </div>
+
+                            <div class="col-12 text-center mt-3">
+                                <p class="text-muted small mb-0">
+                                    Already have an account?
+                                    <a asp-action="Login" class="text-decoration-none">Sign in</a>
+                                </p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer Text -->
+            <div class="text-center mt-3">
+                <p class="text-muted small">By registering, you agree to our Terms of Service and Privacy Policy.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
