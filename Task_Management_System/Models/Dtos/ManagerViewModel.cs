@@ -11,7 +11,6 @@ namespace Task_Management_System.Models.DTOs
         [StringLength(100)]
         public string Name { get; set; }
 
-        [Required]
         [EmailAddress]
         public string Email { get; set; }
 
@@ -25,8 +24,12 @@ namespace Task_Management_System.Models.DTOs
         [Required]
         public string Status { get; set; }
 
-        [Required]
         [DataType(DataType.Password)]
         public string? Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Passwords do not match.")]
+        public string? ConfirmPassword { get; set; }
+
     }
 }

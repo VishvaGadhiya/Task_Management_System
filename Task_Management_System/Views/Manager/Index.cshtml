@@ -1,6 +1,12 @@
 ﻿@{
     ViewData["Title"] = "Manager Management";
 }
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["Error"]
+    </div>
+}
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -96,19 +102,57 @@
                 }
             });
         }
-
         function AddEditManager(id) {
+            const url = id === 0 ? '/Manager/Create' : `/Manager/Edit?id=${id}`;
+
             $.ajax({
                 type: 'GET',
-                url: '/Manager/AddOrEdit',
-                data: { id: id },
+                url: url,
                 success: function (res) {
                     $("#modalContent").html(res);
                     $("#divModal").modal('show');
-                    bindFormSubmit();
+
+                    $("#managerForm").submit(function (e) {
+                        e.preventDefault();
+
+                        var form = $(this);
+                        $.ajax({
+                            url: form.attr('action'), // This will be Create or Edit
+                            type: 'POST',
+                            data: form.serialize(),
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            success: function (res) {
+                                if (res.success) {
+                                    $("#divModal").modal('hide');
+                                    managerTable.ajax.reload(null, false);
+                                    showPopupMessage('success', res.message);
+                                } else {
+                                    $("#modalContent").html(res);
+                                    // Rebind form submit
+                                    $("#managerForm").submit(arguments.callee);
+                                }
+                            },
+                                    error: function (xhr) {
+            let message = "An error occurred while saving the manager.";
+
+            if (xhr.responseText) {
+                try {
+                    const json = JSON.parse(xhr.responseText);
+                    message = json.message || message;
+                } catch {
+                    message = xhr.responseText;
+                }
+            }
+
+            showPopupMessage('danger', message);
+        }
+
+                        });
+                    });
                 }
             });
         }
+
 
         function bindFormSubmit() {
             $("#formManager").submit(function (e) {

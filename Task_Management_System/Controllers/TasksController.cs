@@ -1,15 +1,18 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 using Task_Management_System.Data;
 using Task_Management_System.Models;
-using Microsoft.EntityFrameworkCore;
 using Task_Management_System.Models.Dtos;
 
 namespace Task_Management_System.Controllers
 {
+    [Authorize(Roles = "Admin")]
+
     public class TasksController : Controller
     {
         private readonly ApplicationDbContext _context;

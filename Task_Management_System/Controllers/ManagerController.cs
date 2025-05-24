@@ -82,13 +82,68 @@ namespace Task_Management_System.Controllers
         }
 
         [HttpGet]
-        public IActionResult AddOrEdit(int id = 0)
+        public IActionResult Create()
         {
-            if (id == 0)
-                return PartialView("_ManagerFormPartial", new ManagerViewModel { JoinDate = System.DateTime.Now, Status = "Active" });
+            return PartialView("_ManagerFormPartial", new ManagerViewModel
+            {
+                JoinDate = DateTime.Now,
+                Status = "Active"
+            });
+        }
 
-            var user = _context.Users.Find(id);
-            if (user == null) return NotFound();
+        [HttpPost]
+        public async Task<IActionResult> Create(ManagerViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+
+                return Json(new { success = false, message = string.Join("; ", errors) });
+            }
+
+            try
+            {
+                var user = new User
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    Name = model.Name,
+                    Gender = model.Gender,
+                    JoinDate = model.JoinDate,
+                    Status = model.Status,
+                    EmailConfirmed = true
+                };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (result.Succeeded)
+                {
+                    await _userManager.AddToRoleAsync(user, "Manager");
+                    return Json(new { success = true, message = "Manager added successfully." });
+                }
+                else
+                {
+                    var errorMessages = result.Errors.Select(e => e.Description).ToList();
+                    return Json(new { success = false, message = string.Join("; ", errorMessages) });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"An error occurred while creating the manager: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user == null)
+            {
+                TempData["Error"] = "Manager not found.";
+                return RedirectToAction("Index"); // or wherever your main view is
+            }
 
             var vm = new ManagerViewModel
             {
@@ -99,66 +154,53 @@ namespace Task_Management_System.Controllers
                 JoinDate = user.JoinDate,
                 Status = user.Status
             };
+
             return PartialView("_ManagerFormPartial", vm);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddOrEdit(ManagerViewModel model)
+        public async Task<IActionResult> Edit(ManagerViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                if (model.Id == 0)
-                {
-                    var user = new User
-                    {
-                        UserName = model.Email,
-                        Email = model.Email,
-                        Name = model.Name,
-                        Gender = model.Gender,
-                        JoinDate = model.JoinDate,
-                        Status = model.Status,
-                        EmailConfirmed = true
-                    };
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
 
-                    var result = await _userManager.CreateAsync(user, model.Password);
-                    if (result.Succeeded)
-                    {
-                        await _userManager.AddToRoleAsync(user, "Manager");
-                        return Json(new { success = true, message = "Manager added successfully." });
-                    }
-                    else
-                    {
-                        foreach (var error in result.Errors)
-                            ModelState.AddModelError(string.Empty, error.Description);
-                    }
+                return Json(new { success = false, message = string.Join("; ", errors) });
+            }
+
+            try
+            {
+                var user = await _userManager.FindByIdAsync(model.Id.ToString());
+                if (user == null)
+                {
+                    return Json(new { success = false, message = "Manager not found." });
+                }
+
+                user.Name = model.Name;
+                user.Email = model.Email;
+                user.UserName = model.Email;
+                user.Gender = model.Gender;
+                user.JoinDate = model.JoinDate;
+                user.Status = model.Status;
+
+                var result = await _userManager.UpdateAsync(user);
+                if (result.Succeeded)
+                {
+                    return Json(new { success = true, message = "Manager updated successfully." });
                 }
                 else
                 {
-                    var user = await _userManager.FindByIdAsync(model.Id.ToString());
-                    if (user == null) return Json(new { success = false, message = "Manager not found." });
-
-                    user.Name = model.Name;
-                    user.Email = model.Email;
-                    user.UserName = model.Email;
-                    user.Gender = model.Gender;
-                    user.JoinDate = model.JoinDate;
-                    user.Status = model.Status;
-
-                    var updateResult = await _userManager.UpdateAsync(user);
-                    if (updateResult.Succeeded)
-                    {
-                        return Json(new { success = true, message = "Manager updated successfully." });
-                    }
-                    else
-                    {
-                        foreach (var error in updateResult.Errors)
-                            ModelState.AddModelError(string.Empty, error.Description);
-                    }
+                    var errorMessages = result.Errors.Select(e => e.Description).ToList();
+                    return Json(new { success = false, message = string.Join("; ", errorMessages) });
                 }
             }
-
-            // Return the partial view with errors to AJAX caller
-            return PartialView("_ManagerFormPartial", model);
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"An error occurred while updating the manager: {ex.Message}" });
+            }
         }
 
         [HttpPost]

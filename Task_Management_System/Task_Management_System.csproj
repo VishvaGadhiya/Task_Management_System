@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Use JwtBearer compatible with .NET 8 -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
+
+    <!-- Identity and EF Core packages -->
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.16" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.16" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.16" />
@@ -14,15 +18,20 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.3" />
   </ItemGroup>
 
-  <!-- Remove conflicting static assets -->
   <ItemGroup>
-    <Content Remove="wwwroot\lib\jquery-validation\**\*" />
+    <!-- Exclude duplicate jquery-validation-unobtrusive static assets -->
     <Content Remove="wwwroot\lib\jquery-validation-unobtrusive\**\*" />
+
+    <!-- Exclude other duplicate or conflicting libs as needed -->
+    <Content Remove="wwwroot\lib\jquery-validation\**\*" />
     <Content Remove="wwwroot\lib\bootstrap\**\*" />
     <Content Remove="wwwroot\lib\jquery\**\*" />
+
+    <!-- Exclude default site assets if replaced by CDN or managed otherwise -->
     <Content Remove="wwwroot\css\site.css" />
     <Content Remove="wwwroot\js\site.js" />
     <Content Remove="wwwroot\favicon.ico" />

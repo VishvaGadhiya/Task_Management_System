@@ -1,6 +1,11 @@
 ﻿@model Task_Management_System.Models.DTOs.ManagerViewModel
 
-<form id="managerForm" method="post" asp-action="AddOrEdit" asp-controller="Manager">
+@{
+    var action = Model.Id == 0 ? "Create" : "Edit";
+}
+
+<form id="managerForm" method="post" asp-action="@action" asp-controller="Manager">
+
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -42,6 +47,11 @@
                         @Html.PasswordFor(m => m.Password, new { @class = "form-control" })
                         @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
                     </div>
+                    <div class="mb-3">
+                        @Html.LabelFor(m => m.ConfirmPassword)
+                        @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
+                    </div>
                 }
             </div>
             <div class="modal-footer">
@@ -52,33 +62,3 @@
     </div>
 </form>
 
-@section Scripts {
-    <script>
-        // AJAX submit form
-        $(document).on('submit', '#managerForm', function (e) {
-            e.preventDefault();
-
-            var form = $(this);
-            $.ajax({
-                url: form.attr('action'),
-                type: 'POST',
-                data: form.serialize(),
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function (res) {
-                    if (res.success) {
-                        var modalEl = document.getElementById('managerModal');
-                        var modal = bootstrap.Modal.getInstance(modalEl);
-                        modal.hide();
-                        location.reload();
-                    } else {
-                        // Partial view with validation errors
-                        $('#managerModal').html(res);
-                    }
-                },
-                error: function () {
-                    alert("An error occurred while saving the manager.");
-                }
-            });
-        });
-    </script>
-}

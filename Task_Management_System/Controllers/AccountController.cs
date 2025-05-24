@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Task_Management_System.Helpers;
 using Task_Management_System.Models;
@@ -11,11 +15,13 @@ public class AccountController : Controller
 {
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
+    private readonly IConfiguration _configuration;
 
-    public AccountController(UserManager<User> userManager, SignInManager<User> signInManager)
+    public AccountController(UserManager<User> userManager, SignInManager<User> signInManager,IConfiguration configuration)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _configuration = configuration;
     }
 
     [HttpGet]
@@ -105,56 +111,61 @@ public class AccountController : Controller
     public IActionResult Login() => View();
 
     [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Login(LoginViewModel model)
-{
-    if (!ModelState.IsValid)
-        return View(model);
-
-    var user = await _userManager.FindByNameAsync(model.UserName);
-    if (user == null)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(LoginViewModel model)
     {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var user = await _userManager.FindByNameAsync(model.UserName);
+        if (user == null)
+        {
+            ModelState.AddModelError("", "Invalid login attempt.");
+            return View(model);
+        }
+
+        if (!await _userManager.IsEmailConfirmedAsync(user))
+        {
+            ModelState.AddModelError("", "Please confirm your email before logging in.");
+            return View(model);
+        }
+
+        if (user.Status != "Active")
+        {
+            ModelState.AddModelError("", "Your account is not active.");
+            return View(model);
+        }
+
+        var result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            var token = GenerateJwtToken(user);
+
+            // Set the JWT token as a cookie
+            Response.Cookies.Append("JwtToken", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,  // set to true in production
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.Now.AddMinutes(double.Parse(_configuration["JwtSettings:ExpiryMinutes"]))
+            });
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Manager"))
+                return RedirectToAction("Index", "UserTasks");
+            else if (roles.Contains("Admin"))
+                return RedirectToAction("Index", "User");
+            else if (roles.Contains("User"))
+                return RedirectToAction("MyTasks", "UserTasks");
+
+            return RedirectToAction("Index", "Home");
+        }
+
         ModelState.AddModelError("", "Invalid login attempt.");
         return View(model);
     }
 
-    if (!await _userManager.IsEmailConfirmedAsync(user))
-    {
-        ModelState.AddModelError("", "Please check your email and confirm your account before logging in.");
-        return View(model);
-    }
-        if (user.Status != "Active")
-        {
-            ModelState.AddModelError("", "Your account is not active. Please contact administrator.");
-            return View(model);
-        }
-        var result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
-
-    if (result.Succeeded)
-    {
-        // Get roles of the user
-        var roles = await _userManager.GetRolesAsync(user);
-
-        if (roles.Contains("Manager"))
-        {
-            return RedirectToAction("Index", "UserTasks");
-        }
-        else if (roles.Contains("Admin"))
-        {
-            return RedirectToAction("Index", "User");
-        }
-        else if (roles.Contains("User"))
-        {
-            return RedirectToAction("MyTasks", "UserTasks");
-        }
-
-        // Default fallback
-        return RedirectToAction("Index", "Home");
-    }
-
-    ModelState.AddModelError("", "Invalid login attempt.");
-    return View(model);
-}
 
 
 
@@ -345,5 +356,35 @@ public async Task<IActionResult> Login(LoginViewModel model)
     }
 
 
+    private string GenerateJwtToken(User user)
+    {
+        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var secretKey = jwtSettings["SecretKey"];
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.UserName),
+        // Add roles as claims if needed
+    };
+
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: jwtSettings["Issuer"],
+            audience: jwtSettings["Audience"],
+            claims: claims,
+            expires: DateTime.Now.AddMinutes(double.Parse(jwtSettings["ExpiryMinutes"])),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    [HttpGet]
+    public IActionResult AccessDenied()
+    {
+        return View();
+    }
 
 }

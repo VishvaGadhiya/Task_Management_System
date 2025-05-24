@@ -10,8 +10,7 @@ namespace Task_Management_System.Models.Dtos
         [Required]
         public string Name { get; set; }
 
-        [Required]
-        public string Gender { get; set; }
+        public string? Gender { get; set; }
 
         [Required]
         [DataType(DataType.Date)]
