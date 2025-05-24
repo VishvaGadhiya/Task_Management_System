@@ -13,7 +13,7 @@
 
         <div class="mb-3">
             <label asp-for="Name" class="form-label"></label>
-            <input asp-for="Name" class="form-control" readonly />
+            <input asp-for="Name" class="form-control" readonly style="background-color: #e9ecef;" />
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
         @Html.HiddenFor(m => m.Gender)
@@ -30,7 +30,7 @@
 
         <div class="mb-3">
             <label asp-for="JoinDate" class="form-label"></label>
-            <input asp-for="JoinDate" type="date" class="form-control" value="@Model?.JoinDate.ToString("yyyy-MM-dd")" readonly />
+            <input asp-for="JoinDate" type="date" class="form-control" value="@Model?.JoinDate.ToString("yyyy-MM-dd")" readonly style="background-color: #e9ecef;" />
             <span asp-validation-for="JoinDate" class="text-danger"></span>
         </div>
 
