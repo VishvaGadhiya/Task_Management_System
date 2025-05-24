@@ -387,4 +387,90 @@ public class AccountController : Controller
         return View();
     }
 
+    [HttpGet]
+    public IActionResult ChangeEmail()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeEmail(ChangeEmailViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+            return RedirectToAction("Login");
+
+        // Verify current password
+        if (!await _userManager.CheckPasswordAsync(user, model.CurrentPassword))
+        {
+            ModelState.AddModelError("CurrentPassword", "The password is incorrect.");
+            return View(model);
+        }
+
+        // Check if email is already in use
+        var existingUser = await _userManager.FindByEmailAsync(model.NewEmail);
+        if (existingUser != null && existingUser.Id != user.Id)
+        {
+            ModelState.AddModelError("NewEmail", "This email is already in use.");
+            return View(model);
+        }
+
+        // Generate email change token
+        var token = await _userManager.GenerateChangeEmailTokenAsync(user, model.NewEmail);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        // Create confirmation link
+        var callbackUrl = Url.Action(
+            "ConfirmEmailChange",
+            "Account",
+            new { userId = user.Id, newEmail = model.NewEmail, token = encodedToken },
+            protocol: Request.Scheme);
+
+        // Send confirmation email
+        var emailSender = new EmailSender();
+        await emailSender.SendEmailAsync(
+            model.NewEmail,
+            "Confirm your email change",
+            $"Please confirm your email change by <a href='{callbackUrl}'>clicking here</a>.");
+
+        TempData["Message"] = "Confirmation link to change email has been sent. Please check your email.";
+        return RedirectToAction("ManageProfile");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ConfirmEmailChange(string userId, string newEmail, string token)
+    {
+        if (userId == null || newEmail == null || token == null)
+            return RedirectToAction("Index", "Home");
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+        var result = await _userManager.ChangeEmailAsync(user, newEmail, decodedToken);
+
+        if (result.Succeeded)
+        {
+            // Update the username if it matches the old email
+            if (user.UserName == user.Email)
+            {
+                await _userManager.SetUserNameAsync(user, newEmail);
+            }
+
+            // Refresh the sign-in cookie
+            await _signInManager.RefreshSignInAsync(user);
+
+            TempData["Success"] = "Your email has been changed successfully.";
+            return RedirectToAction("ManageProfile");
+        }
+
+        TempData["Error"] = "Error changing your email.";
+        return RedirectToAction("ManageProfile");
+    }
+
 }

@@ -11,11 +11,11 @@ namespace Task_Management_System.Helpers
         private readonly string _smtpUser = "koby.jerde76@ethereal.email";
         private readonly string _smtpPass = "1RZMgEvwnaUEDkPhwG";
 
-        public async Task SendEmailAsync(string toEmail, string subject, string message)
+        public async Task SendEmailAsync(string toEmail, string subject, string message, string fromName = null)
         {
             var mail = new MailMessage
             {
-                From = new MailAddress(_smtpUser),
+                From = new MailAddress(_smtpUser, fromName ?? "Task Management System"),
                 Subject = subject,
                 Body = message,
                 IsBodyHtml = true
