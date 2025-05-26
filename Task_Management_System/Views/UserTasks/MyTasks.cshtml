@@ -34,23 +34,29 @@
 
 @section Scripts {
     <script>
-        $(function () {
+                   $(function () {
             var table = $('#tasksTable').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: '@Url.Action("GetMyTasks")',
+                    url: '@Url.Action("GetMyTasks", "UserTasks")',
                     type: 'POST',
                     data: function (d) {
-                        d.status = $('#statusFilter').val();
-                        d.dueDateFrom = $('#dueDateFrom').val();
-                        d.dueDateTo = $('#dueDateTo').val();
-
-                        // DataTables paging & sorting params
-                        d.start = d.start;
-                        d.length = d.length;
-                        d.sortColumn = d.columns[d.order[0].column].data;
-                        d.sortDir = d.order[0].dir;
+                        return {
+                            status: $('#statusFilter').val(),
+                            dueDateFrom: $('#dueDateFrom').val(),
+                            dueDateTo: $('#dueDateTo').val(),
+                            sortColumn: d.columns[d.order[0].column].data,
+                            sortDir: d.order[0].dir,
+                            start: d.start,
+                            length: d.length,
+                            draw: d.draw,
+                            searchValue: d.search.value 
+                        };
+                    },
+                    error: function (xhr, error, thrown) {
+                        console.log('Ajax error:', xhr.responseText);
+                        showAlert('Error loading tasks. Please try again.', 'danger');
                     }
                 },
                 columns: [
@@ -82,7 +88,16 @@
                         }
                     }
                 ],
-                order: [[1, 'asc']]
+                order: [[1, 'asc']],
+                language: {
+                    emptyTable: "No tasks found",
+                },
+                
+                serverSide: true
+          
+
+       
+        
             });
 
             $('#statusFilter, #dueDateFrom, #dueDateTo').on('change', function () {

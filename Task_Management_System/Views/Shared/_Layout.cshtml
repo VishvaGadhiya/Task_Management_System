@@ -93,7 +93,7 @@
                                     <i class="bi bi-person-circle me-2"></i>
                                     <span>@User.FindFirst(ClaimTypes.Email)?.Value</span>
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
+                                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown"> 
                                     <li>
                                         <a class="dropdown-item d-flex align-items-center" asp-controller="Account" asp-action="ManageProfile">
                                             <i class="bi bi-person-gear me-2"></i> Manage Profile

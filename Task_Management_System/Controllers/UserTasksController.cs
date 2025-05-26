@@ -255,84 +255,156 @@ namespace Task_Management_System.Controllers
             return View();
         }
         [HttpPost]
-        public async Task<IActionResult> GetMyTasks(string status, DateTime? dueDateFrom, DateTime? dueDateTo, string sortColumn, string sortDir, int start, int length)
+        public async Task<IActionResult> GetMyTasks(
+    [FromForm] string status,
+    [FromForm] string dueDateFrom,
+    [FromForm] string dueDateTo,
+    [FromForm] string sortColumn,
+    [FromForm] string sortDir,
+    [FromForm] int start = 0,
+    [FromForm] int length = 10,
+    [FromForm] string searchValue = null) 
         {
-            // Get current user id
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-            // Get tasks assigned to this user
-            var query = _context.UserTasks
-                .Where(ut => ut.UserId == userId)
-                .Select(ut => ut.Task)
-                .AsQueryable();
-
-            // Filter by Status
-            if (!string.IsNullOrEmpty(status))
-                query = query.Where(t => t.Status == status);
-
-            // Filter by DueDate range
-            if (dueDateFrom.HasValue)
-                query = query.Where(t => t.DueDate.Date >= dueDateFrom.Value.Date);
-
-            if (dueDateTo.HasValue)
-                query = query.Where(t => t.DueDate.Date <= dueDateTo.Value.Date);
-
-            int recordsTotal = await query.CountAsync();
-
-            // Sorting
-            if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortDir))
+            try
             {
-                query = query.OrderBy($"{sortColumn} {sortDir}");
+                var userEmail = User.FindFirstValue(ClaimTypes.Email) ??
+                               User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Json(new
+                    {
+                        draw = Request.Form["draw"].FirstOrDefault(),
+                        error = "User not authenticated"
+                    });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                if (user == null)
+                {
+                    return Json(new
+                    {
+                        draw = Request.Form["draw"].FirstOrDefault(),
+                        error = "User not found"
+                    });
+                }
+
+                var query = _context.UserTasks
+                    .Where(ut => ut.UserId == user.Id)
+                    .Select(ut => ut.Task);
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(t => t.Status == status);
+                }
+
+                if (!string.IsNullOrEmpty(searchValue))
+                {
+                    searchValue = searchValue.ToLower();
+                    query = query.Where(t =>
+                        t.Title.ToLower().Contains(searchValue) ||
+                        t.Status.ToLower().Contains(searchValue) ||
+                        t.DueDate.ToString().ToLower().Contains(searchValue));
+                }
+
+                int recordsTotal = await query.CountAsync();
+
+                if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortDir))
+                {
+                    try
+                    {
+                        var sortProperty = sortColumn switch
+                        {
+                            "title" => "Title",
+                            "dueDate" => "DueDate",
+                            "status" => "Status",
+                            "priority" => "Priority",
+                            _ => "DueDate" 
+                        };
+
+                        query = query.OrderBy($"{sortProperty} {sortDir}");
+                    }
+                    catch
+                    {
+                        query = query.OrderBy(t => t.DueDate);
+                    }
+                }
+                else
+                {
+                    query = query.OrderBy(t => t.DueDate);
+                }
+
+                int recordsFiltered = await query.CountAsync();
+
+                var data = await query
+                    .Skip(start)
+                    .Take(length)
+                    .Select(t => new
+                    {
+                        id = t.Id,
+                        title = t.Title,
+                        dueDate = t.DueDate.ToString("yyyy-MM-dd"),
+                        status = t.Status,
+                        priority =  "Medium" 
+                    })
+                    .ToListAsync();
+
+                return Json(new
+                {
+                    draw = Request.Form["draw"].FirstOrDefault(),
+                    recordsTotal,
+                    recordsFiltered, 
+                    data
+                });
             }
-            else
+            catch (Exception ex)
             {
-                query = query.OrderBy(t => t.DueDate);
+                return Json(new
+                {
+                    draw = Request.Form["draw"].FirstOrDefault(),
+                    error = "An error occurred while processing your request",
+                    details = ex.Message
+                });
             }
-
-            var data = await query.Skip(start).Take(length)
-    .Select(t => new
-    {
-        t.Id,
-        t.Title,
-        DueDate = t.DueDate.ToString("yyyy-MM-dd"),
-        t.Status,
-        Priority = "Medium" // or any computed value or default
-    }).ToListAsync();
-
-
-            return Json(new
-            {
-                recordsTotal,
-                recordsFiltered = recordsTotal,
-                data
-            });
         }
 
         [HttpPost]
         public async Task<IActionResult> UpdateStatus(int id, string status)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            try
+            {
+                var userEmail = User.FindFirstValue(ClaimTypes.Email) ??
+                               User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Check if task assigned to this user
-            var userTask = await _context.UserTasks
-                .Include(ut => ut.Task)
-                .FirstOrDefaultAsync(ut => ut.UserId == userId && ut.TaskId == id);
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Json(new { success = false, error = "User not authenticated" });
+                }
 
-            if (userTask == null) return Forbid();
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                if (user == null)
+                {
+                    return Json(new { success = false, error = "User not found" });
+                }
 
-            // Update status with allowed flow only
-            var allowedStatuses = new[] { "ToDo", "InProgress", "Completed" };
-            if (!allowedStatuses.Contains(status))
-                return BadRequest("Invalid status.");
+                var userTask = await _context.UserTasks
+                    .Include(ut => ut.Task)
+                    .FirstOrDefaultAsync(ut => ut.UserId == user.Id && ut.TaskId == id);
 
-            // Optional: Enforce status flow logic (e.g. no skipping)
-            // For simplicity, just assign the status
-            userTask.Task.Status = status;
+                if (userTask == null)
+                {
+                    return Json(new { success = false, error = "Task not assigned to user" });
+                }
 
-            await _context.SaveChangesAsync();
+                userTask.Task.Status = status;
+                await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
         }
-
     }
 }

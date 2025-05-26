@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
@@ -74,9 +75,25 @@ public class AccountController : Controller
             return RedirectToAction("RegisterConfirmation");
         }
 
-        foreach (var error in result.Errors)
-            ModelState.AddModelError("", error.Description);
+        var passwordErrors = result.Errors
+              .Where(e => e.Code.Contains("Password"))
+              .Select(e => e.Description)
+              .ToList();
 
+        foreach (var key in ModelState.Keys.Where(k => k.Contains("Password")).ToList())
+        {
+            ModelState[key].Errors.Clear();
+        }
+
+        foreach (var err in passwordErrors)
+        {
+            ModelState.AddModelError(string.Empty, err);
+        }
+
+        foreach (var error in result.Errors.Where(e => !e.Code.Contains("Password")))
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
         return View(model);
     }
 
@@ -136,45 +153,40 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
-
-        if (result.Succeeded)
+        if (!await _userManager.CheckPasswordAsync(user, model.Password))
         {
-            var token = GenerateJwtToken(user);
-
-            // Set the JWT token as a cookie
-            Response.Cookies.Append("JwtToken", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,  // set to true in production
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.Now.AddMinutes(double.Parse(_configuration["JwtSettings:ExpiryMinutes"]))
-            });
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (roles.Contains("Manager"))
-                return RedirectToAction("Index", "UserTasks");
-            else if (roles.Contains("Admin"))
-                return RedirectToAction("Index", "User");
-            else if (roles.Contains("User"))
-                return RedirectToAction("MyTasks", "UserTasks");
-
-            return RedirectToAction("Index", "Home");
+            ModelState.AddModelError("", "Invalid login attempt.");
+            return View(model);
         }
 
-        ModelState.AddModelError("", "Invalid login attempt.");
-        return View(model);
+        var token = await GenerateJwtToken(user);
+
+        Response.Cookies.Append("JwtToken", token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = model.RememberMe ? DateTimeOffset.Now.AddDays(30) : DateTimeOffset.Now.AddHours(3)
+        });
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains("Admin"))
+            return RedirectToAction("Index", "User");
+        else if (roles.Contains("Manager"))
+            return RedirectToAction("Index", "UserTasks");
+
+        return RedirectToAction("MyTasks", "UserTasks");
     }
 
 
 
 
-
-
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
+        Response.Cookies.Delete("JwtToken");
         return RedirectToAction("Login", "Account");
     }
 
@@ -315,8 +327,14 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> ManageProfile()
     {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null) return RedirectToAction("Login");
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out var id))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var user = await _userManager.FindByIdAsync(id.ToString());
 
         var model = new ManageProfileViewModel
         {
@@ -338,7 +356,6 @@ public class AccountController : Controller
         var user = await _userManager.GetUserAsync(User);
         if (user == null) return RedirectToAction("Login");
 
-        // Prevent username or email change if needed, or allow it with proper checks
         user.Name = model.Name;
         user.Gender = model.Gender;
 
@@ -356,30 +373,40 @@ public class AccountController : Controller
     }
 
 
-    private string GenerateJwtToken(User user)
+
+    private async Task<string> GenerateJwtToken(User user)
     {
-        var jwtSettings = _configuration.GetSection("JwtSettings");
-        var secretKey = jwtSettings["SecretKey"];
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var roles = await _userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
     {
+        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), 
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
         new Claim(ClaimTypes.Name, user.UserName),
-        // Add roles as claims if needed
+        new Claim(ClaimTypes.Email, user.Email) 
     };
 
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: jwtSettings["Issuer"],
             audience: jwtSettings["Audience"],
             claims: claims,
-            expires: DateTime.Now.AddMinutes(double.Parse(jwtSettings["ExpiryMinutes"])),
-            signingCredentials: creds);
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: creds
+        );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
 
     [HttpGet]
     public IActionResult AccessDenied()
